@@ -1,13 +1,53 @@
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+import { login } from '../../services/auth.service'
+import { useAuthStore } from '../../stores/auth'
+
+const email = ref('')
+const password = ref('')
+const error = ref('')
+
+const router = useRouter()
+const authStore = useAuthStore()
+
+const handleLogin = async () => {
+  error.value = ''
+
+  try {
+    const response = await login(email.value, password.value)
+
+    authStore.setAuth(response.data.token, response.data.user)
+
+    router.push('/dashboard')
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Prijava nije uspjela.'
+  }
+}
+</script>
+
 <template>
   <main class="flex min-h-screen items-center justify-center bg-brand-cream-100 px-4">
-    <section class="w-full max-w-md rounded-2xl border border-brand-border bg-white p-8 shadow-lg">
-      <p class="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-brand-red-700">
-        Pršutana Barić
+    <div class="w-full max-w-md rounded-xl bg-white p-8 shadow">
+      <h1 class="mb-6 text-3xl font-bold">Prijava</h1>
+
+      <input v-model="email" class="mb-4 w-full rounded border p-3" placeholder="Email" />
+
+      <input
+        v-model="password"
+        type="password"
+        class="mb-4 w-full rounded border p-3"
+        placeholder="Lozinka"
+      />
+
+      <button class="w-full rounded bg-brand-red-700 p-3 text-white" @click="handleLogin">
+        Prijavi se
+      </button>
+
+      <p v-if="error" class="mt-4 text-red-600">
+        {{ error }}
       </p>
-
-      <h1 class="text-3xl font-bold text-brand-brown-900">Prijava u sustav</h1>
-
-      <p class="mt-3 text-sm text-stone-600">Sustav za digitalno upravljanje narudžbama.</p>
-    </section>
+    </div>
   </main>
 </template>
