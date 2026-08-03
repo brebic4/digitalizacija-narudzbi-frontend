@@ -1,3 +1,18 @@
+<script setup>
+import { onMounted } from 'vue'
+import { testBackendConnection } from '../../services/test.service'
+
+onMounted(async () => {
+  try {
+    const response = await testBackendConnection()
+
+    console.log(response)
+  } catch (error) {
+    console.error(error)
+  }
+})
+</script>
+
 <template>
   <main class="min-h-screen bg-brand-cream-50 p-8">
     <h1 class="text-3xl font-bold text-brand-brown-900">Dashboard</h1>
