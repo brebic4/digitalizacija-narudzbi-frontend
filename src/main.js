@@ -6,9 +6,17 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
-const app = createApp(App)
+import { useAuthStore } from './stores/auth'
+import { setupApiResponseInterceptor } from './services/api'
 
-app.use(createPinia())
+const app = createApp(App)
+const pinia = createPinia()
+
+app.use(pinia)
 app.use(router)
+
+const authStore = useAuthStore(pinia)
+
+setupApiResponseInterceptor(authStore, router)
 
 app.mount('#app')
