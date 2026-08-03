@@ -1,5 +1,22 @@
 @import 'tailwindcss';
 
+@theme {
+  --color-brand-brown-950: #241712;
+  --color-brand-brown-900: #33211b;
+  --color-brand-brown-800: #442d24;
+
+  --color-brand-cream-50: #faf8f2;
+  --color-brand-cream-100: #f2eddf;
+  --color-brand-cream-200: #e6ddc9;
+
+  --color-brand-red-700: #7a1f22;
+  --color-brand-red-800: #65181b;
+
+  --color-brand-gold-500: #b28a3e;
+
+  --color-brand-border: #d5cbb8;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -14,8 +31,8 @@
     min-width: 320px;
     min-height: 100vh;
     margin: 0;
-    background-color: #f8fafc;
-    color: #0f172a;
+    background-color: var(--color-brand-cream-50);
+    color: #2d241f;
     font-family:
       Inter,
       system-ui,
@@ -30,5 +47,9 @@
   select,
   textarea {
     font: inherit;
+  }
+
+  button {
+    cursor: pointer;
   }
 }
