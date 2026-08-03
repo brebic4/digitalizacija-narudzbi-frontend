@@ -1,7 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import AppLayout from '../layouts/AppLayout.vue'
 import LoginView from '../views/auth/LoginView.vue'
 import DashboardView from '../views/dashboard/DashboardView.vue'
+import CustomersView from '../views/customers/CustomersView.vue'
+import ProductsView from '../views/products/ProductsView.vue'
+import OrdersView from '../views/orders/OrdersView.vue'
+import AiProcessingView from '../views/ai/AiProcessingView.vue'
+import ChatbotView from '../views/chatbot/ChatbotView.vue'
 
 import { useAuthStore } from '../stores/auth'
 
@@ -11,7 +17,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/login',
+      redirect: '/dashboard',
     },
     {
       path: '/login',
@@ -19,19 +25,69 @@ const router = createRouter({
       component: LoginView,
       meta: {
         guestOnly: true,
+        title: 'Prijava',
       },
     },
     {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: DashboardView,
+      path: '/',
+      component: AppLayout,
       meta: {
         requiresAuth: true,
       },
+      children: [
+        {
+          path: 'dashboard',
+          name: 'dashboard',
+          component: DashboardView,
+          meta: {
+            title: 'Dashboard',
+          },
+        },
+        {
+          path: 'orders',
+          name: 'orders',
+          component: OrdersView,
+          meta: {
+            title: 'Narudžbe',
+          },
+        },
+        {
+          path: 'ai-processing',
+          name: 'ai-processing',
+          component: AiProcessingView,
+          meta: {
+            title: 'AI obrada PDF-a',
+          },
+        },
+        {
+          path: 'customers',
+          name: 'customers',
+          component: CustomersView,
+          meta: {
+            title: 'Kupci',
+          },
+        },
+        {
+          path: 'products',
+          name: 'products',
+          component: ProductsView,
+          meta: {
+            title: 'Proizvodi',
+          },
+        },
+        {
+          path: 'chatbot',
+          name: 'chatbot',
+          component: ChatbotView,
+          meta: {
+            title: 'AI chatbot',
+          },
+        },
+      ],
     },
     {
       path: '/:pathMatch(.*)*',
-      redirect: '/login',
+      redirect: '/dashboard',
     },
   ],
 })
@@ -40,11 +96,18 @@ router.beforeEach((to) => {
   const authStore = useAuthStore()
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return '/login'
+    return {
+      name: 'login',
+      query: {
+        redirect: to.fullPath,
+      },
+    }
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
-    return '/dashboard'
+    return {
+      name: 'dashboard',
+    }
   }
 })
 

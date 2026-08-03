@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 import { login } from '../../services/auth.service'
 import { useAuthStore } from '../../stores/auth'
@@ -10,6 +10,7 @@ const password = ref('')
 const error = ref('')
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const handleLogin = async () => {
@@ -20,7 +21,10 @@ const handleLogin = async () => {
 
     authStore.setAuth(response.data.token, response.data.user)
 
-    router.push('/dashboard')
+    const redirectPath =
+      typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
+
+    router.push(redirectPath)
   } catch (err) {
     error.value = err.response?.data?.message || 'Prijava nije uspjela.'
   }
