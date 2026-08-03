@@ -1,22 +1,23 @@
 <script setup>
-import { onMounted } from 'vue'
-import { testBackendConnection } from '../../services/test.service'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
 
-onMounted(async () => {
-  try {
-    const response = await testBackendConnection()
+const router = useRouter()
+const authStore = useAuthStore()
 
-    console.log(response)
-  } catch (error) {
-    console.error(error)
-  }
-})
+function logout() {
+  authStore.logout()
+
+  router.push('/login')
+}
 </script>
 
 <template>
   <main class="min-h-screen bg-brand-cream-50 p-8">
-    <h1 class="text-3xl font-bold text-brand-brown-900">Dashboard</h1>
+    <h1 class="text-3xl font-bold">Dashboard</h1>
 
-    <p class="mt-2 text-stone-600">Frontend je uspješno postavljen.</p>
+    <button class="mt-6 rounded bg-brand-red-700 px-5 py-3 text-white" @click="logout">
+      Odjava
+    </button>
   </main>
 </template>
