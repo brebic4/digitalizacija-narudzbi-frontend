@@ -1,15 +1,20 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { LogOut, Menu, UserRound } from 'lucide-vue-next'
 
 import { useAuthStore } from '../../stores/auth'
+import ConfirmationModal from '../common/ConfirmationModal.vue'
 
 const emit = defineEmits(['toggle-sidebar'])
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+const logoutModalOpen = ref(false)
+const logoutLoading = ref(false)
+const logoutError = ref('')
 
 const pageTitle = computed(() => {
   return route.meta.title || 'Digitalizacija narudžbi'
@@ -24,9 +29,38 @@ const userFullName = computed(() => {
   return fullName || authStore.user?.email || 'Korisnik'
 })
 
-function logout() {
-  authStore.logout()
-  router.push('/login')
+function openLogoutModal() {
+  logoutError.value = ''
+  logoutModalOpen.value = true
+}
+
+function closeLogoutModal() {
+  if (logoutLoading.value) {
+    return
+  }
+
+  logoutModalOpen.value = false
+  logoutError.value = ''
+}
+
+async function confirmLogout() {
+  logoutLoading.value = true
+  logoutError.value = ''
+
+  try {
+    await authStore.logout()
+
+    logoutModalOpen.value = false
+
+    await router.replace({
+      name: 'login',
+    })
+  } catch (err) {
+    logoutError.value =
+      err.response?.data?.message || err.message || 'Odjava iz sustava nije uspjela.'
+  } finally {
+    logoutLoading.value = false
+  }
 }
 </script>
 
@@ -75,7 +109,7 @@ function logout() {
       <button
         type="button"
         class="flex items-center gap-2 rounded-lg border border-brand-border px-3 py-2 text-sm font-semibold text-brand-brown-900 transition hover:border-brand-red-700 hover:bg-brand-red-700 hover:text-white"
-        @click="logout"
+        @click="openLogoutModal"
       >
         <LogOut :size="18" />
 
@@ -83,4 +117,17 @@ function logout() {
       </button>
     </div>
   </header>
+
+  <ConfirmationModal
+    :open="logoutModalOpen"
+    :loading="logoutLoading"
+    :error="logoutError"
+    title="Odjava iz sustava"
+    message="Jeste li sigurni da se želite odjaviti? Morat ćete se ponovno prijaviti kako biste nastavili rad."
+    confirm-text="Odjavi se"
+    loading-text="Odjavljivanje..."
+    cancel-text="Odustani"
+    @confirm="confirmLogout"
+    @cancel="closeLogoutModal"
+  />
 </template>
