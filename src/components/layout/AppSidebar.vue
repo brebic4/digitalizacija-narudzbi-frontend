@@ -1,4 +1,6 @@
 <script setup>
+import { computed } from 'vue'
+
 import {
   Bot,
   Boxes,
@@ -8,7 +10,10 @@ import {
   ShoppingCart,
   Users,
   X,
+  UserCog,
 } from 'lucide-vue-next'
+
+import { useAuthStore } from '../../stores/auth'
 
 defineProps({
   open: {
@@ -18,6 +23,7 @@ defineProps({
 })
 
 const emit = defineEmits(['close'])
+const authStore = useAuthStore()
 
 const navigation = [
   {
@@ -46,11 +52,27 @@ const navigation = [
     icon: Package,
   },
   {
+    name: 'Zaposlenici',
+    to: '/users',
+    icon: UserCog,
+    adminOnly: true,
+  },
+  {
     name: 'Chatbot',
     to: '/chatbot',
     icon: Bot,
   },
 ]
+
+const visibleNavigation = computed(() => {
+  return navigation.filter((item) => {
+    if (item.adminOnly && authStore.user?.role !== 'ADMIN') {
+      return false
+    }
+
+    return true
+  })
+})
 </script>
 
 <template>
@@ -85,7 +107,7 @@ const navigation = [
 
     <nav class="flex-1 space-y-2 overflow-y-auto p-4">
       <RouterLink
-        v-for="item in navigation"
+        v-for="item in visibleNavigation"
         :key="item.to"
         :to="item.to"
         class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-brand-cream-200 transition hover:bg-white/10 hover:text-white"

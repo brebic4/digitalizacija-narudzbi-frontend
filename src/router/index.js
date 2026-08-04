@@ -10,6 +10,7 @@ import OrderDetailsView from '../views/orders/OrderDetailsView.vue'
 import AiProcessingView from '../views/ai/AiProcessingView.vue'
 import ChatbotView from '../views/chatbot/ChatbotView.vue'
 import NewOrderView from '../views/orders/NewOrderView.vue'
+import UsersView from '../views/users/UsersView.vue'
 
 import { useAuthStore } from '../stores/auth'
 
@@ -101,6 +102,15 @@ const router = createRouter({
             title: 'AI chatbot',
           },
         },
+        {
+          path: 'users',
+          name: 'users',
+          component: UsersView,
+          meta: {
+            title: 'Zaposlenici',
+            adminOnly: true,
+          },
+        },
       ],
     },
     {
@@ -119,6 +129,12 @@ router.beforeEach((to) => {
       query: {
         redirect: to.fullPath,
       },
+    }
+  }
+
+  if (to.meta.adminOnly && authStore.user?.role !== 'ADMIN') {
+    return {
+      name: 'dashboard',
     }
   }
 
