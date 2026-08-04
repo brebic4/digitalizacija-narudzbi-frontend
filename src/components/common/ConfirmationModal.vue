@@ -5,6 +5,11 @@ const props = defineProps({
   open: Boolean,
   loading: Boolean,
 
+  loadingText: {
+    type: String,
+    default: 'Spremanje...',
+  },
+
   title: {
     type: String,
     default: 'Potvrda',
@@ -94,7 +99,7 @@ function close() {
             <LoaderCircle v-if="loading" class="animate-spin" :size="18" />
 
             <span>
-              {{ loading ? 'Brisanje...' : confirmText }}
+              {{ loading ? loadingText : confirmText }}
             </span>
           </button>
         </footer>

@@ -2,8 +2,15 @@
 import { onMounted, ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight, Package, Plus, RefreshCw, Search } from 'lucide-vue-next'
 
-import { getProducts, createProduct, updateProduct } from '../../services/products.service'
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  changeProductActiveStatus,
+} from '../../services/products.service'
 import ProductFormModal from '../../components/products/ProductFormModal.vue'
+import ConfirmationModal from '../../components/common/ConfirmationModal.vue'
 
 const products = ref([])
 const loading = ref(false)
@@ -19,6 +26,12 @@ const savingProduct = ref(false)
 const formError = ref('')
 const successMessage = ref('')
 
+const productToConfirm = ref(null)
+const confirmationModalOpen = ref(false)
+const confirmationLoading = ref(false)
+const confirmationError = ref('')
+const selectedAction = ref('')
+
 const pagination = ref({
   totalItems: 0,
   currentPage: 1,
@@ -28,6 +41,60 @@ const pagination = ref({
 
 let searchTimeout
 
+function openConfirmation(product, action) {
+  productToConfirm.value = product
+  selectedAction.value = action
+  confirmationError.value = ''
+  confirmationModalOpen.value = true
+}
+
+function closeConfirmation() {
+  if (confirmationLoading.value) {
+    return
+  }
+
+  confirmationModalOpen.value = false
+  confirmationError.value = ''
+  productToConfirm.value = null
+  selectedAction.value = ''
+}
+
+async function confirmAction() {
+  if (!productToConfirm.value) {
+    return
+  }
+
+  confirmationLoading.value = true
+  confirmationError.value = ''
+  successMessage.value = ''
+  error.value = ''
+
+  try {
+    if (selectedAction.value === 'delete') {
+      await deleteProduct(productToConfirm.value._id)
+
+      successMessage.value = 'Proizvod je uspješno obrisan.'
+    } else if (selectedAction.value === 'deactivate') {
+      await changeProductActiveStatus(productToConfirm.value._id, false)
+
+      successMessage.value = 'Proizvod je označen kao neaktivan.'
+    } else if (selectedAction.value === 'activate') {
+      await changeProductActiveStatus(productToConfirm.value._id, true)
+
+      successMessage.value = 'Proizvod je uspješno aktiviran.'
+    }
+
+    confirmationModalOpen.value = false
+    productToConfirm.value = null
+    selectedAction.value = ''
+
+    await loadProducts()
+  } catch (err) {
+    confirmationError.value = err.response?.data?.message || 'Akciju nije moguće izvršiti.'
+  } finally {
+    confirmationLoading.value = false
+  }
+}
 function openCreateModal() {
   selectedProduct.value = null
   formError.value = ''
@@ -290,7 +357,12 @@ onMounted(loadProducts)
             <tr
               v-for="product in products"
               :key="product._id"
-              class="transition hover:bg-brand-cream-50"
+              :class="[
+                'transition',
+                product.active
+                  ? 'hover:bg-brand-cream-50'
+                  : 'bg-stone-50 opacity-70 hover:bg-stone-100',
+              ]"
             >
               <td class="px-5 py-4 sm:px-6">
                 <p class="font-semibold text-brand-brown-900">
@@ -333,10 +405,30 @@ onMounted(loadProducts)
                   </button>
 
                   <button
+                    v-if="!product.hasBeenUsed"
                     type="button"
                     class="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                    @click="openConfirmation(product, 'delete')"
                   >
                     Obriši
+                  </button>
+
+                  <button
+                    v-else-if="product.active"
+                    type="button"
+                    class="rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
+                    @click="openConfirmation(product, 'deactivate')"
+                  >
+                    Označi kao neaktivan
+                  </button>
+
+                  <button
+                    v-else
+                    type="button"
+                    class="rounded-lg border border-green-200 px-3 py-2 text-xs font-semibold text-green-700 transition hover:bg-green-50"
+                    @click="openConfirmation(product, 'activate')"
+                  >
+                    Aktiviraj
                   </button>
                 </div>
               </td>
@@ -397,6 +489,43 @@ onMounted(loadProducts)
       :server-error="formError"
       @close="closeFormModal"
       @submit="handleProductSubmit"
+    />
+
+    <ConfirmationModal
+      :open="confirmationModalOpen"
+      :loading="confirmationLoading"
+      :error="confirmationError"
+      :title="
+        selectedAction === 'delete'
+          ? 'Obriši proizvod'
+          : selectedAction === 'deactivate'
+            ? 'Označi proizvod kao neaktivan'
+            : 'Aktiviraj proizvod'
+      "
+      :message="
+        selectedAction === 'delete'
+          ? `Jeste li sigurni da želite trajno obrisati proizvod '${productToConfirm?.name}'?`
+          : selectedAction === 'deactivate'
+            ? `Proizvod '${productToConfirm?.name}' više neće biti dostupan za nove narudžbe, ali će ostati sačuvan u postojećim narudžbama.`
+            : `Želite li ponovno aktivirati proizvod '${productToConfirm?.name}'?`
+      "
+      :confirm-text="
+        selectedAction === 'delete'
+          ? 'Obriši'
+          : selectedAction === 'deactivate'
+            ? 'Označi kao neaktivan'
+            : 'Aktiviraj'
+      "
+      cancel-text="Odustani"
+      @confirm="confirmAction"
+      @cancel="closeConfirmation"
+      :loading-text="
+        selectedAction === 'delete'
+          ? 'Brisanje...'
+          : selectedAction === 'deactivate'
+            ? 'Označavanje...'
+            : 'Aktiviranje...'
+      "
     />
   </section>
 </template>

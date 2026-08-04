@@ -333,8 +333,6 @@ watch(
                 :disabled="loading"
               >
                 <option value="kom">Komad</option>
-
-                <option value="kg">Kilogram</option>
               </select>
 
               <p v-if="errors.unit" class="mt-2 text-xs text-red-600">

@@ -31,3 +31,11 @@ export async function deleteProduct(id) {
 
   return response.data
 }
+
+export async function changeProductActiveStatus(id, active) {
+  const response = await api.patch(`/products/${id}/active`, {
+    active,
+  })
+
+  return response.data
+}

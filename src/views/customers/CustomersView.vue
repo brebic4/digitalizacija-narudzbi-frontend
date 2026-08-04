@@ -345,7 +345,12 @@ onMounted(loadCustomers)
             <tr
               v-for="customer in customers"
               :key="customer._id"
-              class="transition hover:bg-brand-cream-50"
+              :class="[
+                'transition',
+                customer.active
+                  ? 'hover:bg-brand-cream-50'
+                  : 'bg-stone-50 opacity-70 hover:bg-stone-100',
+              ]"
             >
               <td class="px-5 py-4 sm:px-6">
                 <p class="font-semibold text-brand-brown-900">
@@ -473,6 +478,7 @@ onMounted(loadCustomers)
       title="Obriši kupca"
       :message="`Jeste li sigurni da želite obrisati kupca '${customerToDelete?.name}'? Ovu radnju nije moguće poništiti.`"
       confirm-text="Obriši"
+      loading-text="Brisanje..."
       cancel-text="Odustani"
       @confirm="confirmDeleteCustomer"
       @cancel="closeDeleteModal"
