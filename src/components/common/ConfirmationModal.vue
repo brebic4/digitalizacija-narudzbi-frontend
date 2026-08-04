@@ -44,7 +44,7 @@ function close() {
   <Teleport to="body">
     <div
       v-if="open"
-      class="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4"
+      class="fixed inset-0 z-200 flex items-center justify-center bg-black/50 p-4"
       @click.self="close"
     >
       <section class="w-full max-w-md rounded-2xl border border-brand-border bg-white shadow-2xl">
