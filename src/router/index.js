@@ -6,6 +6,7 @@ import DashboardView from '../views/dashboard/DashboardView.vue'
 import CustomersView from '../views/customers/CustomersView.vue'
 import ProductsView from '../views/products/ProductsView.vue'
 import OrdersView from '../views/orders/OrdersView.vue'
+import OrderDetailsView from '../views/orders/OrderDetailsView.vue'
 import AiProcessingView from '../views/ai/AiProcessingView.vue'
 import ChatbotView from '../views/chatbot/ChatbotView.vue'
 
@@ -49,6 +50,14 @@ const router = createRouter({
           component: OrdersView,
           meta: {
             title: 'Narudžbe',
+          },
+        },
+        {
+          path: 'orders/:id',
+          name: 'order-details',
+          component: OrderDetailsView,
+          meta: {
+            title: 'Detalji narudžbe',
           },
         },
         {
