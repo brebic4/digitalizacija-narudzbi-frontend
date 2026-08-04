@@ -2,7 +2,14 @@
 import { onMounted, ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight, Plus, RefreshCw, Search, Users } from 'lucide-vue-next'
 
-import { getCustomers } from '../../services/customers.service'
+import CustomerFormModal from '../../components/customers/CustomerFormModal.vue'
+import ConfirmationModal from '../../components/common/ConfirmationModal.vue'
+import {
+  createCustomer,
+  getCustomers,
+  updateCustomer,
+  deleteCustomer,
+} from '../../services/customers.service'
 
 const customers = ref([])
 const loading = ref(false)
@@ -12,6 +19,17 @@ const search = ref('')
 const currentPage = ref(1)
 const itemsPerPage = ref(10)
 
+const formModalOpen = ref(false)
+const selectedCustomer = ref(null)
+const savingCustomer = ref(false)
+const formError = ref('')
+const successMessage = ref('')
+
+const deleteModalOpen = ref(false)
+const deletingCustomer = ref(false)
+const customerToDelete = ref(null)
+const deleteError = ref('')
+
 const pagination = ref({
   totalItems: 0,
   currentPage: 1,
@@ -20,6 +38,96 @@ const pagination = ref({
 })
 
 let searchTimeout
+
+function openCreateModal() {
+  selectedCustomer.value = null
+  formError.value = ''
+  formModalOpen.value = true
+}
+
+function openEditModal(customer) {
+  selectedCustomer.value = customer
+  formError.value = ''
+  formModalOpen.value = true
+}
+
+function closeFormModal() {
+  if (savingCustomer.value) {
+    return
+  }
+
+  formModalOpen.value = false
+  selectedCustomer.value = null
+  formError.value = ''
+}
+
+async function handleCustomerSubmit(payload) {
+  savingCustomer.value = true
+  formError.value = ''
+  successMessage.value = ''
+
+  try {
+    if (selectedCustomer.value?._id) {
+      await updateCustomer(selectedCustomer.value._id, payload)
+
+      successMessage.value = 'Kupac je uspješno ažuriran.'
+    } else {
+      await createCustomer(payload)
+
+      successMessage.value = 'Kupac je uspješno dodan.'
+    }
+
+    formModalOpen.value = false
+    selectedCustomer.value = null
+
+    currentPage.value = 1
+    await loadCustomers()
+  } catch (err) {
+    formError.value = err.response?.data?.message || 'Podatke o kupcu nije moguće spremiti.'
+  } finally {
+    savingCustomer.value = false
+  }
+}
+
+function openDeleteModal(customer) {
+  customerToDelete.value = customer
+  deleteError.value = ''
+  deleteModalOpen.value = true
+}
+
+function closeDeleteModal() {
+  if (deletingCustomer.value) return
+
+  deleteModalOpen.value = false
+  customerToDelete.value = null
+  deleteError.value = ''
+}
+
+async function confirmDeleteCustomer() {
+  if (!customerToDelete.value) {
+    return
+  }
+
+  deletingCustomer.value = true
+  deleteError.value = ''
+  successMessage.value = ''
+  error.value = ''
+
+  try {
+    await deleteCustomer(customerToDelete.value._id)
+
+    successMessage.value = 'Kupac je uspješno obrisan.'
+
+    deleteModalOpen.value = false
+    customerToDelete.value = null
+
+    await loadCustomers()
+  } catch (err) {
+    deleteError.value = err.response?.data?.message || 'Kupca nije moguće obrisati.'
+  } finally {
+    deletingCustomer.value = false
+  }
+}
 
 async function loadCustomers() {
   loading.value = true
@@ -32,15 +140,26 @@ async function loadCustomers() {
       search: search.value.trim(),
     })
 
+    const receivedPagination = response.pagination
+
+    if (receivedPagination.totalPages > 0 && currentPage.value > receivedPagination.totalPages) {
+      currentPage.value = receivedPagination.totalPages
+      return
+    }
+
+    if (receivedPagination.totalPages === 0 && currentPage.value !== 1) {
+      currentPage.value = 1
+      return
+    }
+
     customers.value = response.data
-    pagination.value = response.pagination
+    pagination.value = receivedPagination
   } catch (err) {
     error.value = err.response?.data?.message || 'Kupci nisu mogli biti dohvaćeni.'
   } finally {
     loading.value = false
   }
 }
-
 function goToPage(page) {
   if (page < 1 || page > pagination.value.totalPages || page === currentPage.value) {
     return
@@ -92,6 +211,7 @@ onMounted(loadCustomers)
       <button
         type="button"
         class="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-red-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-red-800"
+        @click="openCreateModal"
       >
         <Plus :size="18" />
         Dodaj kupca
@@ -100,6 +220,13 @@ onMounted(loadCustomers)
 
     <div v-if="error" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
       {{ error }}
+    </div>
+
+    <div
+      v-if="successMessage"
+      class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700"
+    >
+      {{ successMessage }}
     </div>
 
     <section class="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
@@ -264,6 +391,7 @@ onMounted(loadCustomers)
                   <button
                     type="button"
                     class="rounded-lg border border-brand-border px-3 py-2 text-xs font-semibold text-brand-brown-900 transition hover:border-brand-red-700 hover:text-brand-red-700"
+                    @click="openEditModal(customer)"
                   >
                     Uredi
                   </button>
@@ -271,6 +399,7 @@ onMounted(loadCustomers)
                   <button
                     type="button"
                     class="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                    @click="openDeleteModal(customer)"
                   >
                     Obriši
                   </button>
@@ -307,7 +436,7 @@ onMounted(loadCustomers)
           <span class="px-2 text-sm text-stone-600">
             Stranica
             <strong class="text-brand-brown-900">
-              {{ pagination.currentPage }}
+              {{ currentPage }}
             </strong>
             od
             <strong class="text-brand-brown-900">
@@ -327,5 +456,26 @@ onMounted(loadCustomers)
         </div>
       </div>
     </section>
+
+    <CustomerFormModal
+      :open="formModalOpen"
+      :customer="selectedCustomer"
+      :loading="savingCustomer"
+      :server-error="formError"
+      @close="closeFormModal"
+      @submit="handleCustomerSubmit"
+    />
+
+    <ConfirmationModal
+      :open="deleteModalOpen"
+      :loading="deletingCustomer"
+      :error="deleteError"
+      title="Obriši kupca"
+      :message="`Jeste li sigurni da želite obrisati kupca '${customerToDelete?.name}'? Ovu radnju nije moguće poništiti.`"
+      confirm-text="Obriši"
+      cancel-text="Odustani"
+      @confirm="confirmDeleteCustomer"
+      @cancel="closeDeleteModal"
+    />
   </section>
 </template>
