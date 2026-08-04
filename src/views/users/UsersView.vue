@@ -10,6 +10,8 @@ import {
   ShieldCheck,
   UserRound,
   Users,
+  CheckCircle2,
+  MessageCircleMore,
 } from 'lucide-vue-next'
 
 import { useAuthStore } from '../../stores/auth'
@@ -44,6 +46,13 @@ const confirmationError = ref('')
 
 const userToConfirm = ref(null)
 const selectedAction = ref('')
+
+const statistics = ref({
+  totalUsers: 0,
+  activeUsers: 0,
+  adminUsers: 0,
+  whatsappUsers: 0,
+})
 
 const pagination = ref({
   totalItems: 0,
@@ -216,6 +225,13 @@ async function loadUsers() {
 
     users.value = response.data
     pagination.value = receivedPagination
+
+    statistics.value = {
+      totalUsers: response.statistics?.totalUsers || 0,
+      activeUsers: response.statistics?.activeUsers || 0,
+      adminUsers: response.statistics?.adminUsers || 0,
+      whatsappUsers: response.statistics?.whatsappUsers || 0,
+    }
   } catch (err) {
     error.value = err.response?.data?.message || 'Zaposlenici nisu mogli biti dohvaćeni.'
   } finally {
@@ -288,6 +304,80 @@ onBeforeUnmount(() => {
       class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700"
     >
       {{ successMessage }}
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <article class="rounded-2xl border border-brand-border bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="text-sm font-medium text-stone-500">Ukupno zaposlenika</p>
+
+            <p class="mt-2 text-3xl font-bold text-brand-brown-900">
+              {{ statistics.totalUsers }}
+            </p>
+          </div>
+
+          <div
+            class="flex size-12 items-center justify-center rounded-xl bg-brand-cream-100 text-brand-red-700"
+          >
+            <Users :size="23" />
+          </div>
+        </div>
+      </article>
+
+      <article class="rounded-2xl border border-brand-border bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="text-sm font-medium text-stone-500">Administratora</p>
+
+            <p class="mt-2 text-3xl font-bold text-brand-brown-900">
+              {{ statistics.adminUsers }}
+            </p>
+          </div>
+
+          <div
+            class="flex size-12 items-center justify-center rounded-xl bg-brand-cream-100 text-brand-red-700"
+          >
+            <ShieldCheck :size="23" />
+          </div>
+        </div>
+      </article>
+
+      <article class="rounded-2xl border border-brand-border bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="text-sm font-medium text-stone-500">Aktivnih računa</p>
+
+            <p class="mt-2 text-3xl font-bold text-brand-brown-900">
+              {{ statistics.activeUsers }}
+            </p>
+          </div>
+
+          <div
+            class="flex size-12 items-center justify-center rounded-xl bg-green-50 text-green-700"
+          >
+            <CheckCircle2 :size="23" />
+          </div>
+        </div>
+      </article>
+
+      <article class="rounded-2xl border border-brand-border bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <p class="text-sm font-medium text-stone-500">Prima WhatsApp</p>
+
+            <p class="mt-2 text-3xl font-bold text-brand-brown-900">
+              {{ statistics.whatsappUsers }}
+            </p>
+          </div>
+
+          <div
+            class="flex size-12 items-center justify-center rounded-xl bg-green-50 text-green-700"
+          >
+            <MessageCircleMore :size="23" />
+          </div>
+        </div>
+      </article>
     </div>
 
     <section class="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
