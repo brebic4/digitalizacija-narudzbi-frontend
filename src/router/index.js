@@ -9,6 +9,7 @@ import OrdersView from '../views/orders/OrdersView.vue'
 import OrderDetailsView from '../views/orders/OrderDetailsView.vue'
 import AiProcessingView from '../views/ai/AiProcessingView.vue'
 import ChatbotView from '../views/chatbot/ChatbotView.vue'
+import NewOrderView from '../views/orders/NewOrderView.vue'
 
 import { useAuthStore } from '../stores/auth'
 
@@ -50,6 +51,14 @@ const router = createRouter({
           component: OrdersView,
           meta: {
             title: 'Narudžbe',
+          },
+        },
+        {
+          path: 'orders/new',
+          name: 'order-new',
+          component: NewOrderView,
+          meta: {
+            title: 'Nova narudžba',
           },
         },
         {

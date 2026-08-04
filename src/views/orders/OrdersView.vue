@@ -202,14 +202,14 @@ onBeforeUnmount(() => {
         </p>
       </div>
 
-      <button
-        type="button"
+      <RouterLink
+        to="/orders/new"
         class="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-red-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-red-800"
       >
         <Plus :size="18" />
 
         Nova narudžba
-      </button>
+      </RouterLink>
     </div>
 
     <div v-if="error" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">

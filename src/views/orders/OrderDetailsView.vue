@@ -210,6 +210,10 @@ async function confirmStatusChange() {
   }
 }
 
+const createdMessage = computed(() => {
+  return route.query.created === 'true' ? 'Narudžba je uspješno kreirana.' : ''
+})
+
 onMounted(loadOrder)
 </script>
 
@@ -234,6 +238,13 @@ onMounted(loadOrder)
       class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700"
     >
       {{ successMessage }}
+    </div>
+
+    <div
+      v-if="createdMessage"
+      class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700"
+    >
+      {{ createdMessage }}
     </div>
 
     <div v-if="loading" class="space-y-4">
