@@ -17,9 +17,25 @@ import {
   Building2,
   PackageSearch,
   UsersRound,
+  BarChart3,
+  PackageOpen,
 } from 'lucide-vue-next'
 
+import {
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
+  Title,
+  Tooltip,
+} from 'chart.js'
+
+import { Bar } from 'vue-chartjs'
+
 import { getDashboardSummary } from '../../services/dashboard.service'
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 const statistics = ref({
   totalOrders: 0,
@@ -44,6 +60,42 @@ const statusDistribution = ref({
 
 const topCustomers = ref([])
 const topProducts = ref([])
+const monthlyOrders = ref([])
+const selectedChartMetric = ref('orders')
+
+const chartMetricOptions = [
+  {
+    value: 'orders',
+    label: 'Narudžbe',
+    icon: ShoppingCart,
+  },
+  {
+    value: 'packages',
+    label: 'Pakiranja',
+    icon: PackageOpen,
+  },
+  {
+    value: 'weight',
+    label: 'Težina',
+    icon: Scale,
+  },
+]
+
+const monthLabels = [
+  'Sij',
+  'Velj',
+  'Ožu',
+  'Tra',
+  'Svi',
+  'Lip',
+  'Srp',
+  'Kol',
+  'Ruj',
+  'Lis',
+  'Stu',
+  'Pro',
+]
+
 const loading = ref(true)
 const error = ref('')
 
@@ -194,6 +246,232 @@ const maximumProductPackages = computed(() => {
   return Math.max(...values, 1)
 })
 
+const normalizedMonthlyOrders = computed(() => {
+  return buildLastSixMonths().map((monthEntry) => {
+    const existingEntry = monthlyOrders.value.find(
+      (item) => Number(item.year) === monthEntry.year && Number(item.month) === monthEntry.month,
+    )
+
+    return {
+      year: monthEntry.year,
+      month: monthEntry.month,
+      ordersCount: Number(existingEntry?.ordersCount || 0),
+      totalPackages: Number(existingEntry?.totalPackages || 0),
+      totalWeightKg: Number(existingEntry?.totalWeightKg || 0),
+    }
+  })
+})
+
+const selectedChartMetricLabel = computed(() => {
+  const option = chartMetricOptions.find((item) => item.value === selectedChartMetric.value)
+
+  return option?.label || 'Narudžbe'
+})
+
+const monthlyChartData = computed(() => {
+  const labels = normalizedMonthlyOrders.value.map((item) => {
+    return `${monthLabels[item.month - 1]} ${item.year}`
+  })
+
+  const values = normalizedMonthlyOrders.value.map((item) => {
+    if (selectedChartMetric.value === 'packages') {
+      return item.totalPackages
+    }
+
+    if (selectedChartMetric.value === 'weight') {
+      return item.totalWeightKg
+    }
+
+    return item.ordersCount
+  })
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: selectedChartMetricLabel.value,
+        data: values,
+        backgroundColor: '#9f1d20',
+        borderColor: '#7f1719',
+        borderWidth: 1,
+        borderRadius: 8,
+        borderSkipped: false,
+        maxBarThickness: 58,
+      },
+    ],
+  }
+})
+
+const monthlyChartOptions = computed(() => {
+  const isWeightMetric = selectedChartMetric.value === 'weight'
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+
+    animation: {
+      duration: 500,
+    },
+
+    plugins: {
+      legend: {
+        display: false,
+      },
+
+      tooltip: {
+        callbacks: {
+          label(context) {
+            const value = Number(context.raw || 0)
+
+            if (isWeightMetric) {
+              return `${formatNumber(value)} kg`
+            }
+
+            if (selectedChartMetric.value === 'packages') {
+              return `${formatNumber(value)} pakiranja`
+            }
+
+            return `${formatNumber(value)} narudžbi`
+          },
+        },
+      },
+    },
+
+    scales: {
+      x: {
+        grid: {
+          display: false,
+        },
+
+        ticks: {
+          color: '#78716c',
+          font: {
+            size: 12,
+          },
+          maxRotation: 0,
+          minRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: 6,
+        },
+
+        border: {
+          display: false,
+        },
+      },
+
+      y: {
+        beginAtZero: true,
+
+        grid: {
+          color: '#eee9e3',
+        },
+
+        border: {
+          display: false,
+        },
+
+        ticks: {
+          color: '#78716c',
+
+          precision: selectedChartMetric.value === 'orders' ? 0 : undefined,
+
+          callback(value) {
+            if (isWeightMetric) {
+              return `${formatNumber(value)} kg`
+            }
+
+            return formatNumber(value)
+          },
+        },
+      },
+    },
+  }
+})
+
+const chartPeriodTotal = computed(() => {
+  return normalizedMonthlyOrders.value.reduce((sum, item) => {
+    if (selectedChartMetric.value === 'packages') {
+      return sum + item.totalPackages
+    }
+
+    if (selectedChartMetric.value === 'weight') {
+      return sum + item.totalWeightKg
+    }
+
+    return sum + item.ordersCount
+  }, 0)
+})
+
+const chartPeriodSuffix = computed(() => {
+  if (selectedChartMetric.value === 'weight') {
+    return ' kg'
+  }
+
+  return ''
+})
+
+const busiestMonth = computed(() => {
+  if (normalizedMonthlyOrders.value.length === 0) {
+    return null
+  }
+
+  function getMetricValue(item) {
+    if (selectedChartMetric.value === 'packages') {
+      return item.totalPackages
+    }
+
+    if (selectedChartMetric.value === 'weight') {
+      return item.totalWeightKg
+    }
+
+    return item.ordersCount
+  }
+
+  return normalizedMonthlyOrders.value.reduce((best, current) => {
+    return getMetricValue(current) > getMetricValue(best) ? current : best
+  })
+})
+
+const busiestMonthLabel = computed(() => {
+  if (!busiestMonth.value) {
+    return '—'
+  }
+
+  return `${monthLabels[busiestMonth.value.month - 1]} ${busiestMonth.value.year}`
+})
+
+const busiestMonthValue = computed(() => {
+  if (!busiestMonth.value) {
+    return 0
+  }
+
+  if (selectedChartMetric.value === 'packages') {
+    return busiestMonth.value.totalPackages
+  }
+
+  if (selectedChartMetric.value === 'weight') {
+    return busiestMonth.value.totalWeightKg
+  }
+
+  return busiestMonth.value.ordersCount
+})
+
+function buildLastSixMonths() {
+  const months = []
+  const now = new Date()
+
+  for (let offset = 5; offset >= 0; offset -= 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - offset, 1)
+
+    months.push({
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+    })
+  }
+
+  return months
+}
+
 function getPercentage(value, maximum) {
   const numericValue = Number(value || 0)
   const numericMaximum = Number(maximum || 1)
@@ -248,6 +526,10 @@ async function loadDashboard() {
     topProducts.value = Array.isArray(response.data.topProducts) ? response.data.topProducts : []
 
     recentOrders.value = Array.isArray(response.data.recentOrders) ? response.data.recentOrders : []
+
+    monthlyOrders.value = Array.isArray(response.data.monthlyOrders)
+      ? response.data.monthlyOrders
+      : []
   } catch (err) {
     error.value = err.response?.data?.message || 'Podaci za dashboard nisu mogli biti dohvaćeni.'
   } finally {
@@ -259,7 +541,7 @@ onMounted(loadDashboard)
 </script>
 
 <template>
-  <section class="space-y-8">
+  <section class="min-w-0 space-y-8">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-red-700">
@@ -327,6 +609,86 @@ onMounted(loadDashboard)
         </p>
       </article>
     </div>
+
+    <section class="rounded-2xl border border-brand-border bg-white p-5 shadow-sm sm:p-6">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex size-11 items-center justify-center rounded-xl bg-brand-cream-100 text-brand-red-700"
+          >
+            <BarChart3 :size="22" />
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-red-700">
+              Posljednjih šest mjeseci
+            </p>
+
+            <h3 class="mt-1 text-xl font-bold text-brand-brown-900">Mjesečni pregled poslovanja</h3>
+          </div>
+        </div>
+
+        <div
+          class="inline-flex w-full rounded-xl border border-brand-border bg-brand-cream-50 p-1 sm:w-auto"
+        >
+          <button
+            v-for="option in chartMetricOptions"
+            :key="option.value"
+            type="button"
+            class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition sm:flex-none"
+            :class="
+              selectedChartMetric === option.value
+                ? 'bg-brand-red-700 text-white shadow-sm'
+                : 'text-stone-600 hover:bg-white hover:text-brand-brown-900'
+            "
+            @click="selectedChartMetric = option.value"
+          >
+            <component :is="option.icon" :size="15" />
+
+            {{ option.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-6 grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_220px]">
+        <div
+          class="relative min-h-85 min-w-0 overflow-hidden rounded-2xl bg-brand-cream-50 p-4 sm:p-5"
+        >
+          <div v-if="loading" class="h-77.5 animate-pulse rounded-xl bg-brand-cream-100" />
+
+          <div v-else class="h-77.5 min-w-0 w-full">
+            <Bar :data="monthlyChartData" :options="monthlyChartOptions" />
+          </div>
+        </div>
+        <aside class="rounded-2xl border border-brand-border bg-brand-cream-50 p-5">
+          <p class="text-xs font-semibold uppercase tracking-[0.15em] text-stone-500">
+            Ukupno u razdoblju
+          </p>
+
+          <p class="mt-3 wrap-break-word text-4xl font-bold text-brand-brown-900">
+            {{ formatNumber(chartPeriodTotal) }}{{ chartPeriodSuffix }}
+          </p>
+
+          <p class="mt-2 text-sm text-stone-500">
+            {{ selectedChartMetricLabel }} u posljednjih šest mjeseci.
+          </p>
+
+          <div class="mt-6 border-t border-brand-border pt-5">
+            <p class="text-xs font-semibold uppercase tracking-[0.15em] text-stone-500">
+              Najaktivniji mjesec
+            </p>
+
+            <p class="mt-3 font-bold text-brand-brown-900">
+              {{ busiestMonthLabel }}
+            </p>
+
+            <p class="mt-1 text-sm text-stone-500">
+              {{ formatNumber(busiestMonthValue) }}{{ chartPeriodSuffix }}
+            </p>
+          </div>
+        </aside>
+      </div>
+    </section>
 
     <div class="grid gap-6 xl:grid-cols-2">
       <!-- Raspodjela statusa -->
