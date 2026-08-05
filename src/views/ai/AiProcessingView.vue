@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import {
   AlertCircle,
   CheckCircle2,
@@ -18,23 +19,29 @@ import {
   PackageCheck,
   UserRound,
   WandSparkles,
+  RotateCcw,
 } from 'lucide-vue-next'
 
 import { deleteOrderPdf, extractOrderFromPdf, uploadOrderPdf } from '../../services/ai.service'
+import { useAiProcessingStore } from '../../stores/aiProcessing'
+import ConfirmationModal from '../../components/common/ConfirmationModal.vue'
+
+const aiProcessingStore = useAiProcessingStore()
+
+const {
+  selectedFile,
+  uploadedFile,
+  analysisResult,
+  uploading,
+  analyzing,
+  deleting,
+  error,
+  successMessage,
+} = storeToRefs(aiProcessingStore)
 
 const fileInput = ref(null)
-
-const selectedFile = ref(null)
-const uploadedFile = ref(null)
-const analysisResult = ref(null)
-
 const isDragging = ref(false)
-const uploading = ref(false)
-const analyzing = ref(false)
-const deleting = ref(false)
-
-const error = ref('')
-const successMessage = ref('')
+const showResetConfirmation = ref(false)
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 
@@ -98,6 +105,26 @@ const matchedCustomerName = computed(() => {
 const matchedCustomerOib = computed(() => {
   return extraction.value?.customerMatch?.customer?.oib || extraction.value?.customerOib || '—'
 })
+
+function startNewAnalysis() {
+  if (busy.value) {
+    return
+  }
+
+  showResetConfirmation.value = true
+}
+
+function confirmStartNewAnalysis() {
+  aiProcessingStore.clearAnalysis()
+
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+
+  isDragging.value = false
+
+  showResetConfirmation.value = false
+}
 
 function formatFileSize(bytes) {
   const numericBytes = Number(bytes || 0)
@@ -165,8 +192,7 @@ function getWarningClasses(severity) {
 }
 
 function resetMessages() {
-  error.value = ''
-  successMessage.value = ''
+  aiProcessingStore.clearMessages()
 }
 
 function validateFile(file) {
@@ -304,26 +330,35 @@ async function handleDeleteUploadedFile() {
     deleting.value = false
   }
 }
-
-onBeforeUnmount(() => {
-  // Ovdje zasad ne brišemo automatski datoteku.
-  // Korisnik je može ručno ukloniti gumbom.
-})
 </script>
 
 <template>
   <section class="space-y-6">
-    <header>
-      <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-red-700">
-        Automatska obrada dokumenta
-      </p>
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-red-700">
+          Automatska obrada dokumenta
+        </p>
 
-      <h2 class="mt-1 text-3xl font-bold text-brand-brown-900">AI obrada PDF narudžbe</h2>
+        <h2 class="mt-1 text-3xl font-bold text-brand-brown-900">AI obrada PDF narudžbe</h2>
 
-      <p class="mt-3 max-w-2xl text-stone-600">
-        Učitajte PDF narudžbu. Sustav će izdvojiti kupca, broj narudžbe, datum isporuke, proizvode i
-        količine.
-      </p>
+        <p class="mt-3 max-w-2xl text-stone-600">
+          Učitajte PDF narudžbu. Sustav će izdvojiti kupca, broj narudžbe, datum isporuke, proizvode
+          i količine.
+        </p>
+      </div>
+
+      <button
+        v-if="selectedFile || uploadedFile || analysisResult"
+        type="button"
+        class="inline-flex items-center justify-center gap-2 rounded-xl border border-brand-border bg-white px-4 py-2.5 text-sm font-semibold text-brand-brown-900 shadow-sm transition hover:border-brand-red-700 hover:text-brand-red-700 disabled:opacity-50"
+        :disabled="busy"
+        @click="startNewAnalysis"
+      >
+        <RotateCcw :size="18" />
+
+        Nova AI analiza
+      </button>
     </header>
 
     <div v-if="error" class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -928,4 +963,15 @@ onBeforeUnmount(() => {
       </section>
     </template>
   </section>
+  <ConfirmationModal
+    :open="showResetConfirmation"
+    :loading="false"
+    title="Nova AI analiza"
+    message="Jeste li sigurni da želite započeti novu AI analizu? Trenutni rezultat analize i učitani PDF bit će uklonjeni."
+    confirm-text="Započni novu analizu"
+    loading-text="Pokretanje..."
+    cancel-text="Odustani"
+    @confirm="confirmStartNewAnalysis"
+    @cancel="showResetConfirmation = false"
+  />
 </template>
