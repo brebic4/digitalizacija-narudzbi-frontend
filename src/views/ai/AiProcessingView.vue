@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 import {
   AlertCircle,
   CheckCircle2,
@@ -20,13 +21,17 @@ import {
   UserRound,
   WandSparkles,
   RotateCcw,
+  ArrowRight,
 } from 'lucide-vue-next'
 
 import { deleteOrderPdf, extractOrderFromPdf, uploadOrderPdf } from '../../services/ai.service'
 import { useAiProcessingStore } from '../../stores/aiProcessing'
+import { useOrderDraftStore } from '../../stores/orderDraft'
 import ConfirmationModal from '../../components/common/ConfirmationModal.vue'
 
 const aiProcessingStore = useAiProcessingStore()
+const router = useRouter()
+const orderDraftStore = useOrderDraftStore()
 
 const {
   selectedFile,
@@ -44,6 +49,25 @@ const isDragging = ref(false)
 const showResetConfirmation = ref(false)
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
+
+async function openAiOrderDraft() {
+  const draft = analysisResult.value?.orderDraft
+
+  if (!draft) {
+    error.value = 'AI rezultat ne sadrži nacrt narudžbe za uređivanje.'
+
+    return
+  }
+
+  orderDraftStore.setAiDraft(draft)
+
+  await router.push({
+    name: 'order-new',
+    query: {
+      source: 'ai',
+    },
+  })
+}
 
 const busy = computed(() => {
   return uploading.value || analyzing.value || deleting.value
@@ -931,35 +955,34 @@ async function handleDeleteUploadedFile() {
         </div>
       </section>
 
-      <!-- OpenAI potrošnja -->
       <section
-        v-if="analysisResult.usage"
-        class="rounded-2xl border border-brand-border bg-white px-5 py-4 shadow-sm sm:px-6"
+        class="flex flex-col gap-4 rounded-2xl border border-brand-border bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"
       >
-        <div
-          class="flex flex-col gap-3 text-sm text-stone-500 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <span>
-            Ulazni tokeni:
-            <strong class="text-brand-brown-900">
-              {{ formatNumber(analysisResult.usage.inputTokens) }}
-            </strong>
-          </span>
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-red-700">
+            Sljedeći korak
+          </p>
 
-          <span>
-            Izlazni tokeni:
-            <strong class="text-brand-brown-900">
-              {{ formatNumber(analysisResult.usage.outputTokens) }}
-            </strong>
-          </span>
+          <h3 class="mt-1 text-xl font-bold text-brand-brown-900">
+            Pregledajte i kreirajte narudžbu
+          </h3>
 
-          <span>
-            Ukupno tokena:
-            <strong class="text-brand-brown-900">
-              {{ formatNumber(analysisResult.usage.totalTokens) }}
-            </strong>
-          </span>
+          <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
+            Podaci iz AI analize prenijet će se u obrazac narudžbe. Prije spremanja možete ih
+            pregledati i ručno ispraviti.
+          </p>
         </div>
+
+        <button
+          type="button"
+          class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-red-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled="!analysisResult.orderDraft"
+          @click="openAiOrderDraft"
+        >
+          Pregledaj narudžbu
+
+          <ArrowRight :size="19" />
+        </button>
       </section>
     </template>
   </section>
